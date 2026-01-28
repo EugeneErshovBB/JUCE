@@ -3613,6 +3613,11 @@ public:
     }
 
     //==============================================================================
+    //VST3 SAA
+    std::atomic<int> vst3ParamWriteIndex { 0 };
+    std::atomic<int> vst3ParamReadIndex { 0 };
+    VST3SampleAccurateParamChange vst3ParamBuffer[kMaxVST3ParamChangesPerBlock];
+
     void processParameterChanges (Vst::IParameterChanges& paramChanges)
     {
         jassert (pluginInstance != nullptr);
@@ -3651,10 +3656,37 @@ public:
                 }
                 else
                #endif
-                if (const auto change = getPointFromQueue (paramQueue, numPoints - 1))
                 {
-                    if (auto* param = comPluginInstance->getParamForVSTParamID (vstParamID))
-                        setValueAndNotifyIfChanged (*param, (float) change->value);
+                    if (const auto change = getPointFromQueue (paramQueue, numPoints - 1))
+                    {
+                        if (auto* param = comPluginInstance->getParamForVSTParamID (vstParamID))
+                            setValueAndNotifyIfChanged (*param, (float) change->value);
+                    }
+                    //VST3 SAA
+                    for (Steinberg::int32 point = 0; point < numPoints; ++point)
+                    {
+                        Steinberg::int32 offsetSamples = 0;
+                        double value = 0.0;
+
+                        if (paramQueue->getPoint (point, offsetSamples, value) != kResultTrue)
+                            continue;
+
+                        const int write = vst3ParamWriteIndex.load (std::memory_order_relaxed);
+                        const int next  = (write + 1) % kMaxVST3ParamChangesPerBlock;
+
+                        if (next != vst3ParamReadIndex.load (std::memory_order_acquire))
+                        {
+                            vst3ParamBuffer[write] =
+                            {
+                                static_cast<uint32_t> (vstParamID),
+                                paramName,
+                                offsetSamples,
+                                static_cast<float> (value)
+                            };
+
+                            vst3ParamWriteIndex.store (next, std::memory_order_release);
+                        }
+                    }
                 }
             }
         }
@@ -3850,7 +3882,11 @@ private:
                 if (pluginInstance->getBypassParameter() == nullptr && comPluginInstance->getBypassParameter()->getValue() >= 0.5f)
                     pluginInstance->processBlockBypassed (buffer, midiBuffer);
                 else
-                    pluginInstance->processBlock (buffer, midiBuffer);
+                {
+                  //VST3 SAA
+                  pluginInstance->consumeVST3Automation (vst3ParamBuffer, vst3ParamWriteIndex, vst3ParamReadIndex);
+                  pluginInstance->processBlock (buffer, midiBuffer);
+                }
             }
 
            #if JUCE_DEBUG && (! JucePlugin_ProducesMidiOutput)
@@ -4180,3 +4216,4 @@ JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 JUCE_END_NO_SANITIZE
 
 #endif //JucePlugin_Build_VST3
+
