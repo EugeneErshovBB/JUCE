@@ -3644,6 +3644,7 @@ public:
             {
                 const auto vstParamID = paramQueue->getParameterId();
                 const auto numPoints  = paramQueue->getPointCount();
+                const auto paramName  = dynamic_cast<AudioProcessorParameterWithID*>(comPluginInstance->getParamForVSTParamID (vstParamID))->getParameterID().toStdString();
 
                #if JUCE_VST3_EMULATE_MIDI_CC_WITH_PARAMETERS
                 if (juceVST3EditController != nullptr && juceVST3EditController->isMidiControllerParamID (vstParamID))
@@ -4216,4 +4217,5 @@ JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 JUCE_END_NO_SANITIZE
 
 #endif //JucePlugin_Build_VST3
+
 
