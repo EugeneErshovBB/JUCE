@@ -3616,7 +3616,7 @@ public:
     //VST3 SAA
     std::atomic<int> vst3ParamWriteIndex { 0 };
     std::atomic<int> vst3ParamReadIndex { 0 };
-    VST3SampleAccurateParamChange vst3ParamBuffer[kMaxVST3ParamChangesPerBlock];
+    juce::VST3SampleAccurateParamChange vst3ParamBuffer[juce::kMaxVST3ParamChangesPerBlock];
 
     void processParameterChanges (Vst::IParameterChanges& paramChanges)
     {
@@ -3673,7 +3673,7 @@ public:
                             continue;
 
                         const int write = vst3ParamWriteIndex.load (std::memory_order_relaxed);
-                        const int next  = (write + 1) % kMaxVST3ParamChangesPerBlock;
+                        const int next  = (write + 1) % juce::kMaxVST3ParamChangesPerBlock;
 
                         if (next != vst3ParamReadIndex.load (std::memory_order_acquire))
                         {
@@ -4217,5 +4217,6 @@ JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 JUCE_END_NO_SANITIZE
 
 #endif //JucePlugin_Build_VST3
+
 
 
