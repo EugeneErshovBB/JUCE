@@ -35,6 +35,15 @@
 namespace juce
 {
 
+static constexpr int kMaxVST3ParamChangesPerBlock = 2048;
+
+struct VST3SampleAccurateParamChange {
+    uint32_t paramID;
+    std::string paramName;
+    int32_t sampleOffset;
+    float normalizedValue;
+};
+
 class AudioProcessorEditor;
 
 //==============================================================================
@@ -314,6 +323,12 @@ public:
     */
     virtual void processBlockBypassed (AudioBuffer<double>& buffer,
                                        MidiBuffer& midiMessages);
+
+    /** VST3 SAA
+    */
+    virtual void consumeVST3Automation (const VST3SampleAccurateParamChange* buffer,
+                                        std::atomic<int>& writeIndex,
+                                        std::atomic<int>& readIndex) = 0;
 
 
     //==============================================================================
@@ -1658,3 +1673,4 @@ private:
 };
 
 } // namespace juce
+
